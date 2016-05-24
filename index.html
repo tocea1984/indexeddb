@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>HTML5 API. Использование локальной базы данных</title>
+  <link href="style.css" rel="stylesheet" type="text/css">
+  <script>
+    var isDB = false;
+    window.addEventListener("load", function(){
+      if("indexedDB" in window){
+        console.log("Поддержка есть")
+        isDB = true;
+      } false;
+    })
+  </script>
+</head>
+
+<body>
+  <label for="firstName">Имя:</label>
+  <input type="text" id="firstName">
+  <label for="lastName">Фамилия:</label>
+  <input type="text" id="lastName">
+  <label for="email">Email:</label>
+  <input type="text" id="email">
+  <label for="phone">Телефон:</label>
+  <input type="text" id="phone">
+  <button onclick="saveItem()">Сохранить</button>
+  <hr>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Имя</th>
+        <th>Фамилия</th>
+        <th>Email</th>
+        <th>Телефон</th>
+        <th>Изменить</th>
+        <th>Удалить</th>
+      </tr>
+    </thead>
+    <tbody id="output">
+      <tr>
+        <td colspan="7">&nbsp;</td>
+      </tr>
+    </tbody>
+  </table>
+  <button onclick="updateTable()">Показать всех</button>
+  <button onclick="deleteALL()">Удалить всех</button>
+  <button onclick="getNodeValue()">Text</button>
+
+  <script>
+    var db;
+    var dbName = "addressBook";
+    var dbVersion = 1;
+    var tableName = "users";
+    var emptyHeader = "Записей в книге нет";
+   
+   function Data(){
+      this.firstName;
+      this.lastName;
+      this.email;
+      this.phone
+    };
+    
+	var firstName = document.getElementById("firstName").value;
+    var lastName = document.getElementById("lastName").value;
+    var email  = document.getElementById("email").value;
+    var phone  = document.getElementById("phone").value;
+    var flag = false;
+    var GlobalKey = 12;
+
+    var openRequest = indexedDB.open(dbName, dbVersion);
+    openRequest.onupgradeneeded = function(e){
+      console.log("OK");
+      var thisDB = e.target.result;
+      if(!thisDB.objectStoreNames.contains(tableName));
+      thisDB.createObjectStore(tableName,{autoIncrement:true})
+    };
+
+    openRequest.onsuccess = function(e){
+      console.log("success");
+      db = e.target.result;
+          
+    }
+
+    openRequest.onerror = function(e){
+      var arr = e.target.error;
+      console.log(err.name + err.message);
+
+    }
+
+    function updateTable(){
+        var tbody = document.getElementById("output");
+        tbody.innerHTML = "";
+       
+        var transaction = db.transaction([tableName],"readwrite");
+        var store = transaction.objectStore(tableName);
+        var cursor = store.openCursor();
+        cursor.onsuccess = function(e){
+          var res = e.target.result;
+          if(res){
+            var id = res.key;
+            var firstName = res.value.firstName;
+            var lastName = res.value.lastName;
+            var email = res.value.email;
+            var phone = res.value.phone;
+            tbody.innerHTML += "<tr><td>"+id+"</td><td>"+firstName+"</td><td>"+lastName+"</td><td>"+email+"</td><td>"+phone+"</td><td><span onclick="+"updateItem(\'"+id+"\')"+">X</span></td><td><span onclick="+"deleteItem(\'"+id+"\')"+">X</span></td></tr>";
+           // console.dir();
+            res.continue();
+            cursor.onerror = function(e){
+              var err = e.target.error;
+               console.log(err.name + err.message);
+            }
+          }
+        }
+    };
+
+    function saveItem(){
+      if(flag == false){
+      firstName = document.getElementById("firstName").value;
+      lastName = document.getElementById("lastName").value;
+      email  = document.getElementById("email").value;
+      phone  = document.getElementById("phone").value;
+      
+        var data = new Data;
+        data.firstName = firstName;
+        data.lastName = lastName;
+        data.email = email;
+        data.phone = phone;
+        console.log(data);
+
+      var transaction = db.transaction([tableName],"readwrite");
+      var store = transaction.objectStore(tableName)
+      
+      var request = store.add(data);
+      console.log(Data);
+      document.getElementById("firstName").value = "";
+      document.getElementById("lastName").value = "";
+      document.getElementById("email").value = "";
+      document.getElementById("phone").value = "";
+           
+      updateTable();
+        }else{
+      alert(GlobalKey);
+
+      firstName = document.getElementById("firstName").value;
+      lastName = document.getElementById("lastName").value;
+      email  = document.getElementById("email").value;
+      phone  = document.getElementById("phone").value;
+        
+       var data = new Data;
+        data.firstName = firstName;
+        data.lastName = lastName;
+        data.email = email;
+        data.phone = phone;
+        
+      var transaction = db.transaction([tableName],"readwrite");
+      var store = transaction.objectStore(tableName)
+      
+      var request = store.put(data,GlobalKey);
+     // console.log(Data);
+      document.getElementById("firstName").value = "";
+      document.getElementById("lastName").value = "";
+      document.getElementById("email").value = "";
+      document.getElementById("phone").value = "";
+           
+      updateTable();
+      flag = false;
+
+        }
+    }
+
+    function updateItem(key){
+        var keyNumber = parseFloat(key);
+		console.log(keyNumber);
+
+      var transaction = db.transaction([tableName],"readonly");
+      var store = transaction.objectStore(tableName);
+      var request = store.get(keyNumber);
+      request.onsuccess = function(e){ console.dir(e.target.result)
+     
+      //console.log(e.target.key);
+      
+      document.getElementById("firstName").value = e.target.result.firstName;
+      document.getElementById("lastName").value = e.target.result.lastName;
+      document.getElementById("email").value = e.target.result.email;
+      document.getElementById("phone").value = e.target.result.phone;
+      
+      flag = true;
+      GlobalKey = keyNumber;
+      console.log(flag)
+      deleteItem(keyNumber)
+
+
+      };
+    }
+
+    function deleteItem(key){
+        var keyNumber = parseFloat(key) 
+        console.log(keyNumber+100);
+        var transaction = db.transaction([tableName],"readwrite");
+        var store = transaction.objectStore(tableName);
+        var request = store.delete(keyNumber);
+        request.onsuccess = function(e){console.log("delete")}
+        updateTable();
+    }
+
+      function deleteALL(){
+        var transaction = db.transaction([tableName],"readwrite");
+        var store = transaction.objectStore(tableName);
+        var request = store.clear();
+          request.onsuccess = function(e){console.log("delete")}
+        updateTable();
+
+      }
+      
+  </script>
+</body>
+
+</html>
